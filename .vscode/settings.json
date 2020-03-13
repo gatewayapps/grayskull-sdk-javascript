@@ -1,0 +1,7 @@
+{
+  "files.exclude": {
+    "**/*.tsbuildinfo": true,
+    "**/dist": true,
+    "node_modules": true
+  }
+}
