@@ -5,6 +5,8 @@
   "license": "MIT",
   "private": true,
   "dependencies": {
-    "grayskull-sdk": "0.1.0"
+    "@types/jsonwebtoken": "^8.3.8",
+    "grayskull-sdk": "0.1.0",
+    "jsonwebtoken": "^8.5.1"
   }
 }

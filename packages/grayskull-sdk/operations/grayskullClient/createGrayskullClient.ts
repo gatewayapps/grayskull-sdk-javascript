@@ -1,79 +1,91 @@
 import fetch from 'isomorphic-fetch'
-import { ITokenStorage, IGrayskullClient, IAccessTokenResponse, HttpMethod } from '../../foundation/types'
+import {
+	ITokenStorage,
+	IGrayskullClient,
+	IAccessTokenResponse,
+	HttpMethod,
+	IIDToken,
+	IAccessToken
+} from '../../foundation/types'
 import { addSeconds, differenceInMilliseconds } from 'date-fns'
 import { authenticateWithCredentials } from '../authentication/authenticateWithCredentials'
 import jwt from 'jsonwebtoken'
 import { refreshTokens } from '../authentication/refreshTokens'
 import { createCookieTokenStorage } from '../tokenStorage/createCookieTokenStorage'
+import { createRequestFunction } from './createRequestFunction'
+import { authenticateWithMultifactorToken } from '../authentication/authenticateWithMultifactorToken'
+import { decode } from 'punycode'
 
+export function createGrayskullClient(
+	clientId: string,
+	clientSecret: string,
+	serverUrl: string,
+	tokenStorage?: ITokenStorage
+): IGrayskullClient {
+	if (!tokenStorage) {
+		tokenStorage = createCookieTokenStorage()
+	}
 
-export function createGrayskullClient(clientId: string, clientSecret: string, serverUrl: string, tokenStorage?: ITokenStorage): IGrayskullClient {
+	const makeRequest = createRequestFunction(clientId, clientSecret, serverUrl)
 
-    if (!tokenStorage) {
-        tokenStorage = createCookieTokenStorage()
-    }
+	const handleTokenResponse = async (result: IAccessTokenResponse) => {
+		if (result.challenge) {
+			if (result.challenge.challenge_token) {
+				tokenStorage!.setToken('challenge', result.challenge.challenge_token, undefined)
+			}
+		}
+		if (result.access_token) {
+			const decoded = (await jwt.verify(result.access_token, clientSecret)) as IAccessToken
+			if (decoded) {
+				tokenStorage!.setToken('access', result.access_token, new Date(decoded.exp))
 
-    const makeRequest = async <T>(endpoint: string, body: { [key: string]: any }, method: HttpMethod = 'POST') => {
-        const finalUrl = new URL(endpoint, serverUrl)
-        const headers = {}
-        if (body) {
-            body.client_id = clientId
-            body.client_secret = clientSecret
-            headers['content-type'] = 'application/json'
+				// Refresh the access token 2 minutes before it expires
+				if (result.refresh_token) {
+					const dateToRefresh = addSeconds(new Date(decoded.exp), -120)
+					const refreshInMilliseconds = differenceInMilliseconds(dateToRefresh, new Date())
+					setTimeout(async () => {
+						const refreshResult = await refreshTokens(result.refresh_token!, makeRequest)
+						handleTokenResponse(refreshResult)
+					}, refreshInMilliseconds)
+				}
+			}
+		}
+		if (result.id_token) {
+			const decoded = (await jwt.verify(result.id_token, clientSecret)) as IIDToken
+			if (decoded) {
+				tokenStorage!.setToken('id', result.id_token, new Date(decoded.exp))
+				// Refresh the access token 2 minutes before it expires
+				if (result.refresh_token) {
+					const dateToRefresh = addSeconds(new Date(decoded.exp), -120)
+					const refreshInMilliseconds = differenceInMilliseconds(dateToRefresh, new Date())
+					setTimeout(async () => {
+						const refreshResult = await refreshTokens(result.refresh_token!, makeRequest)
+						handleTokenResponse(refreshResult)
+					}, refreshInMilliseconds)
+				}
+			}
+		}
+		if (result.refresh_token) {
+			tokenStorage!.setToken('refresh', result.refresh_token, undefined)
+		}
+	}
 
-        }
+	return {
+		authenticateWithCredentials: async (emailAddress: string, password: string, scopes: string[]) => {
+			const result = await authenticateWithCredentials(emailAddress, password, scopes, makeRequest)
+			await handleTokenResponse(result)
+			return result
+		},
+		authenticateWithMultifactorToken: async (multifactorToken: string) => {
+			const challengeToken = tokenStorage!.getToken('challenge')
+			if (!challengeToken) {
+				throw new Error('Attempted to authenticate with multifactor token with no challenge token')
+			}
 
-        const response = await fetch(finalUrl.href, { body: body ? JSON.stringify(body) : undefined, method, headers })
-        const result = await response.json() as T
-        return result
-    }
-
-    const handleTokenResponse = async (result: IAccessTokenResponse) => {
-        if (result.access_token) {
-            const decoded = await jwt.verify(result.access_token, clientSecret)
-            if (decoded) {
-                tokenStorage!.setToken('access', result.access_token, decoded.exp)
-
-                // Refresh the access token 2 minutes before it expires
-                if (result.refresh_token) {
-                    const dateToRefresh = addSeconds(new Date(decoded.exp), -120)
-                    const refreshInMilliseconds = differenceInMilliseconds(dateToRefresh, new Date())
-                    setTimeout(async () => {
-                        const refreshResult = await refreshTokens(result.refresh_token!, makeRequest)
-                        handleTokenResponse(refreshResult)
-                    }, refreshInMilliseconds)
-                }
-
-            }
-        }
-        if (result.id_token) {
-            const decoded = await jwt.verify(result.id_token, clientSecret)
-            if (decoded) {
-                tokenStorage!.setToken('id', result.id_token, decoded.exp)
-                // Refresh the access token 2 minutes before it expires
-                if (result.refresh_token) {
-                    const dateToRefresh = addSeconds(new Date(decoded.exp), -120)
-                    const refreshInMilliseconds = differenceInMilliseconds(dateToRefresh, new Date())
-                    setTimeout(async () => {
-                        const refreshResult = await refreshTokens(result.refresh_token!, makeRequest)
-                        handleTokenResponse(refreshResult)
-                    }, refreshInMilliseconds)
-                }
-            }
-        }
-        if (result.refresh_token) {
-            tokenStorage!.setToken('refresh', result.refresh_token, undefined)
-        }
-    }
-
-    return {
-        authenticateWithCredentials: async (emailAddress: string, password: string, scopes: string[]) => {
-            const result = await authenticateWithCredentials(emailAddress, password, scopes, makeRequest)
-            await handleTokenResponse(result)
-            return result
-        },
-        getTokenStorage: () => (tokenStorage!)
-    }
-
-
+			const result = await authenticateWithMultifactorToken(multifactorToken, challengeToken, makeRequest)
+			await handleTokenResponse(result)
+			return result
+		},
+		getTokenStorage: () => tokenStorage!
+	}
 }
