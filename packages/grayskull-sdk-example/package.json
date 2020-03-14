@@ -1,0 +1,10 @@
+{
+  "name": "grayskull-sdk-example",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "grayskull-sdk": "0.1.0"
+  }
+}

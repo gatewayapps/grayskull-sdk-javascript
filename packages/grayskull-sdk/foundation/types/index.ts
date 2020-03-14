@@ -54,8 +54,17 @@ export interface IAccessTokenResponse {
 	refresh_token?: string
 	session_id?: string
 }
+export type HttpMethod = 'POST' | 'GET' | 'PUT' | 'DELETE'
 
 export interface IGrayskullClient {
-	authenticateWithCredentials: (emailAddress: string, password: string) => Promise<IAccessTokenResponse>
-	authenticateWithMultifactorToken: (challengeToken: string, otpToken: string) => Promise<IAccessTokenResponse>
+	authenticateWithCredentials: (emailAddress: string, password: string, scopes: string[]) => Promise<IAccessTokenResponse>
+
+	getTokenStorage: () => ITokenStorage
 }
+
+export interface ITokenStorage {
+	setToken: (tokenType: 'refresh' | 'access' | 'id', value: string, expires: Date | undefined) => void
+	getToken: (tokenType: 'refresh' | 'access' | 'id') => string | null
+}
+
+export type RequestFunction = <T>(endpoint: string, body: { [key: string]: any }, method: HttpMethod) => Promise<T>

@@ -1,10 +1,11 @@
-import { IAccessTokenResponse } from '../../foundation/types'
+import { IAccessTokenResponse, RequestFunction } from '../../foundation/types'
+import { GrantTypes } from '../../foundation/types/grantTypes'
 
 export async function authenticateWithCredentials(
 	emailAddress: string,
 	password: string,
 	scopes: string[],
-	makeRequest: <T>(endpoint, body) => Promise<T>
+	makeRequest: RequestFunction
 ) {
-	return makeRequest<IAccessTokenResponse>(`/api/token`, {})
+	return makeRequest<IAccessTokenResponse>(`/api/token`, { username: emailAddress, password, scopes, grant_type: GrantTypes.Password.id }, 'POST')
 }
