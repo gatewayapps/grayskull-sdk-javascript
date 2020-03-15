@@ -1,12 +1,4 @@
-import fetch from 'isomorphic-fetch'
-import {
-	ITokenStorage,
-	IGrayskullClient,
-	IAccessTokenResponse,
-	HttpMethod,
-	IIDToken,
-	IAccessToken
-} from '../../foundation/types'
+import { ITokenStorage, IGrayskullClient, IAccessTokenResponse, IIDToken, IAccessToken } from '../../foundation/types'
 import { addSeconds, differenceInMilliseconds } from 'date-fns'
 import { authenticateWithCredentials } from '../authentication/authenticateWithCredentials'
 import jwt from 'jsonwebtoken'
@@ -14,7 +6,6 @@ import { refreshTokens } from '../authentication/refreshTokens'
 import { createCookieTokenStorage } from '../tokenStorage/createCookieTokenStorage'
 import { createRequestFunction } from './createRequestFunction'
 import { authenticateWithMultifactorToken } from '../authentication/authenticateWithMultifactorToken'
-import { decode } from 'punycode'
 
 export function createGrayskullClient(
 	clientId: string,
@@ -29,6 +20,9 @@ export function createGrayskullClient(
 	const makeRequest = createRequestFunction(clientId, clientSecret, serverUrl)
 
 	const handleTokenResponse = async (result: IAccessTokenResponse) => {
+		console.log('Got tokens', result)
+		let minimumRefreshTime = 0
+
 		if (result.challenge) {
 			if (result.challenge.challenge_token) {
 				tokenStorage!.setToken('challenge', result.challenge.challenge_token, undefined)
@@ -42,11 +36,7 @@ export function createGrayskullClient(
 				// Refresh the access token 2 minutes before it expires
 				if (result.refresh_token) {
 					const dateToRefresh = addSeconds(new Date(decoded.exp), -120)
-					const refreshInMilliseconds = differenceInMilliseconds(dateToRefresh, new Date())
-					setTimeout(async () => {
-						const refreshResult = await refreshTokens(result.refresh_token!, makeRequest)
-						handleTokenResponse(refreshResult)
-					}, refreshInMilliseconds)
+					minimumRefreshTime = differenceInMilliseconds(dateToRefresh, new Date())
 				}
 			}
 		}
@@ -58,15 +48,19 @@ export function createGrayskullClient(
 				if (result.refresh_token) {
 					const dateToRefresh = addSeconds(new Date(decoded.exp), -120)
 					const refreshInMilliseconds = differenceInMilliseconds(dateToRefresh, new Date())
-					setTimeout(async () => {
-						const refreshResult = await refreshTokens(result.refresh_token!, makeRequest)
-						handleTokenResponse(refreshResult)
-					}, refreshInMilliseconds)
+					if (refreshInMilliseconds < minimumRefreshTime) {
+						minimumRefreshTime = refreshInMilliseconds
+					}
 				}
 			}
 		}
-		if (result.refresh_token) {
+		if (result.refresh_token && minimumRefreshTime) {
 			tokenStorage!.setToken('refresh', result.refresh_token, undefined)
+
+			setTimeout(async () => {
+				const refreshResult = await refreshTokens(result.refresh_token!, makeRequest)
+				handleTokenResponse(refreshResult)
+			}, minimumRefreshTime)
 		}
 	}
 
