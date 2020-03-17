@@ -1,15 +1,18 @@
 import { ITokenStorage, IGrayskullClient, IAccessTokenResponse, IIDToken, IAccessToken } from '../../foundation/types'
 import { addSeconds, differenceInMilliseconds } from 'date-fns'
 import { authenticateWithCredentials } from '../authentication/authenticateWithCredentials'
-import jwt from 'jsonwebtoken'
+
 import { refreshTokens } from '../authentication/refreshTokens'
 import { createCookieTokenStorage } from '../tokenStorage/createCookieTokenStorage'
 import { createRequestFunction } from './createRequestFunction'
 import { authenticateWithMultifactorToken } from '../authentication/authenticateWithMultifactorToken'
+import { decodeToken } from '../tokens/decodeToken'
+import { authenticateWithClientCredentials } from '../authentication/authenticateWithClientCredentials'
+import { listAuthorizedUsers } from '../client/listAuthorizedUsers'
 
 export function createGrayskullClient(
 	clientId: string,
-	clientSecret: string,
+	clientSecret: string | undefined,
 	serverUrl: string,
 	tokenStorage?: ITokenStorage
 ): IGrayskullClient {
@@ -20,7 +23,6 @@ export function createGrayskullClient(
 	const makeRequest = createRequestFunction(clientId, clientSecret, serverUrl)
 
 	const handleTokenResponse = async (result: IAccessTokenResponse) => {
-		console.log('Got tokens', result)
 		let minimumRefreshTime = 0
 
 		if (result.challenge) {
@@ -29,7 +31,7 @@ export function createGrayskullClient(
 			}
 		}
 		if (result.access_token) {
-			const decoded = (await jwt.verify(result.access_token, clientSecret)) as IAccessToken
+			const decoded = (await decodeToken(result.access_token, clientSecret)) as IAccessToken
 			if (decoded) {
 				tokenStorage!.setToken('access', result.access_token, new Date(decoded.exp))
 
@@ -41,7 +43,7 @@ export function createGrayskullClient(
 			}
 		}
 		if (result.id_token) {
-			const decoded = (await jwt.verify(result.id_token, clientSecret)) as IIDToken
+			const decoded = (await decodeToken(result.id_token, clientSecret)) as IIDToken
 			if (decoded) {
 				tokenStorage!.setToken('id', result.id_token, new Date(decoded.exp))
 				// Refresh the access token 2 minutes before it expires
@@ -65,6 +67,14 @@ export function createGrayskullClient(
 	}
 
 	return {
+		authenticateWithClientCredentials: async () => {
+			if (!clientSecret) {
+				throw new Error(`To use the client_credentials grant type, you must provide the client_secret`)
+			}
+			const result = await authenticateWithClientCredentials(clientId, clientSecret, makeRequest)
+			await handleTokenResponse(result)
+			return result
+		},
 		authenticateWithCredentials: async (emailAddress: string, password: string, scopes: string[]) => {
 			const result = await authenticateWithCredentials(emailAddress, password, scopes, makeRequest)
 			await handleTokenResponse(result)
@@ -78,6 +88,15 @@ export function createGrayskullClient(
 
 			const result = await authenticateWithMultifactorToken(multifactorToken, challengeToken, makeRequest)
 			await handleTokenResponse(result)
+			return result
+		},
+		listAuthorizedUsers: async () => {
+			const accessToken = tokenStorage?.getToken('access')
+			if (!accessToken) {
+				throw new Error('You must have an access token to do that')
+			}
+			const result: any = await listAuthorizedUsers(clientId, accessToken, makeRequest)
+
 			return result
 		},
 		getTokenStorage: () => tokenStorage!

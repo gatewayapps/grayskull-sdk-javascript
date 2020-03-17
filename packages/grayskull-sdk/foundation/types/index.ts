@@ -63,7 +63,8 @@ export interface IGrayskullClient {
 		scopes: string[]
 	) => Promise<IAccessTokenResponse>
 	authenticateWithMultifactorToken: (multifactorToken: string) => Promise<IAccessTokenResponse>
-
+	authenticateWithClientCredentials: () => Promise<IAccessTokenResponse>
+	listAuthorizedUsers: () => Promise<any[]>
 	getTokenStorage: () => ITokenStorage
 }
 
@@ -74,4 +75,9 @@ export interface ITokenStorage {
 	getToken: (tokenType: TokenTypes) => string | null
 }
 
-export type RequestFunction = <T>(endpoint: string, body: { [key: string]: any }, method: HttpMethod) => Promise<T>
+export type RequestFunction = <T>(
+	endpoint: string,
+	body: { [key: string]: any },
+	method: HttpMethod,
+	accessToken?: string
+) => Promise<T>

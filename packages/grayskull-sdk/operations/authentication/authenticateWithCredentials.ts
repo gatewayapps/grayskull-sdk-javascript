@@ -7,5 +7,9 @@ export async function authenticateWithCredentials(
 	scopes: string[],
 	makeRequest: RequestFunction
 ) {
-	return makeRequest<IAccessTokenResponse>(`/api/token`, { username: emailAddress, password, scopes, grant_type: GrantTypes.Password.id }, 'POST')
+	return makeRequest<IAccessTokenResponse>(
+		`/api/token`,
+		{ username: emailAddress, password, scopes, grant_type: GrantTypes.Password.id },
+		'POST'
+	)
 }
