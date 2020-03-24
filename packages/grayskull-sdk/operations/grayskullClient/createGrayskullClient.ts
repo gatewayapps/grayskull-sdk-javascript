@@ -1,4 +1,11 @@
-import { ITokenStorage, IGrayskullClient, IAccessTokenResponse, IIDToken, IAccessToken } from '../../foundation/types'
+import {
+	ITokenStorage,
+	IGrayskullClient,
+	IAccessTokenResponse,
+	IIDToken,
+	IAccessToken,
+	IAuthorizedUserFields
+} from '../../foundation/types'
 import { addSeconds, differenceInMilliseconds } from 'date-fns'
 import { authenticateWithCredentials } from '../authentication/authenticateWithCredentials'
 
@@ -9,6 +16,10 @@ import { authenticateWithMultifactorToken } from '../authentication/authenticate
 import { decodeToken } from '../tokens/decodeToken'
 import { authenticateWithClientCredentials } from '../authentication/authenticateWithClientCredentials'
 import { listAuthorizedUsers } from '../client/listAuthorizedUsers'
+import { createUserAccount } from '../client/createUserAccount'
+import { updateUserProfile } from '../user/updateUserProfile'
+import { resetPassword } from '../authentication/resetPassword'
+import { changePasswordWithToken } from '../authentication/changePasswordWithToken'
 
 export function createGrayskullClient(
 	clientId: string,
@@ -90,14 +101,34 @@ export function createGrayskullClient(
 			await handleTokenResponse(result)
 			return result
 		},
-		listAuthorizedUsers: async () => {
+		createUserAccount: async (userData: IAuthorizedUserFields, password: string) => {
 			const accessToken = tokenStorage?.getToken('access')
 			if (!accessToken) {
 				throw new Error('You must have an access token to do that')
 			}
-			const result: any = await listAuthorizedUsers(clientId, accessToken, makeRequest)
+			return await createUserAccount(userData, password, clientId, accessToken, makeRequest)
+		},
+		listAuthorizedUsers: async (limit = 100, offset = 0) => {
+			const accessToken = tokenStorage?.getToken('access')
+			if (!accessToken) {
+				throw new Error('You must have an access token to do that')
+			}
+			const result: any = await listAuthorizedUsers(limit, offset, clientId, accessToken, makeRequest)
 
 			return result
+		},
+		resetPassword: async (emailAddress: string, redirectUri: string) => {
+			return await resetPassword(emailAddress, redirectUri, clientId, makeRequest)
+		},
+		changePasswordWithToken: async (emailAddress: string, token: string, newPassword: string) => {
+			return await changePasswordWithToken(emailAddress, token, newPassword, makeRequest)
+		},
+		updateUserProfile: async (userData: Partial<IAuthorizedUserFields>) => {
+			const accessToken = tokenStorage?.getToken('access')
+			if (!accessToken) {
+				throw new Error('You must have an access token to do that')
+			}
+			return await updateUserProfile(userData, accessToken, makeRequest)
 		},
 		getTokenStorage: () => tokenStorage!
 	}

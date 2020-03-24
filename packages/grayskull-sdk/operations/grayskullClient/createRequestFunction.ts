@@ -18,10 +18,10 @@ export function createRequestFunction(clientId: string, clientSecret: string | u
 			body.client_secret = clientSecret
 		}
 		headers['content-type'] = 'application/json'
-		headers['accept-type'] = 'application/json'
+		headers['accept'] = 'application/json'
 		try {
-			const response = await fetch(finalUrl.href, { body: body ? JSON.stringify(body) : undefined, method, headers })
-
+			const finalBody = method === 'GET' ? undefined : JSON.stringify(body)
+			const response = await fetch(finalUrl.href, { body: finalBody, method, headers })
 			const result = (await response.json()) as T
 			return result
 		} catch (err) {

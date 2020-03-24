@@ -38,6 +38,11 @@ export interface IChallenge {
 	challenge_token: string
 }
 
+export interface IOperationResponse {
+	success: boolean
+	message?: string
+}
+
 export interface IChallengeToken {
 	emailAddress: string
 	userClientId: string
@@ -64,7 +69,11 @@ export interface IGrayskullClient {
 	) => Promise<IAccessTokenResponse>
 	authenticateWithMultifactorToken: (multifactorToken: string) => Promise<IAccessTokenResponse>
 	authenticateWithClientCredentials: () => Promise<IAccessTokenResponse>
-	listAuthorizedUsers: () => Promise<any[]>
+	listAuthorizedUsers: (limit?: number, offset?: number) => Promise<any[]>
+	createUserAccount: (userData: IAuthorizedUserFields, password: string) => Promise<IAuthorizedUser>
+	updateUserProfile: (userData: Partial<IAuthorizedUserFields>) => Promise<IAuthorizedUser>
+	resetPassword: (emailAddress: string, redirectUri: string) => Promise<IOperationResponse>
+	changePasswordWithToken: (emailAddress: string, token: string, newPassword: string) => Promise<IOperationResponse>
 	getTokenStorage: () => ITokenStorage
 }
 
@@ -77,7 +86,26 @@ export interface ITokenStorage {
 
 export type RequestFunction = <T>(
 	endpoint: string,
-	body: { [key: string]: any },
+	body: { [key: string]: any } | undefined,
 	method: HttpMethod,
 	accessToken?: string
 ) => Promise<T>
+
+export interface IAuthorizedUser {
+	sub: string
+	given_name: string
+	family_name: string
+	birthday?: Date
+	gender?: string
+	active_at: Date
+	updated_at: Date
+	email: string
+	email_verified: boolean
+	nickname?: string
+	picture?: string
+}
+
+export type IAuthorizedUserFields = Pick<
+	IAuthorizedUser,
+	'given_name' | 'family_name' | 'gender' | 'nickname' | 'picture' | 'email' | 'birthday'
+>
