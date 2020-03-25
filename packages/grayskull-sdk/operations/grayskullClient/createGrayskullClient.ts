@@ -1,10 +1,12 @@
+import { verify, decode, TokenExpiredError } from 'jsonwebtoken'
 import {
 	ITokenStorage,
 	IGrayskullClient,
 	IAccessTokenResponse,
 	IIDToken,
 	IAccessToken,
-	IAuthorizedUserFields
+	IAuthorizedUserFields,
+	IAuthorizedUser
 } from '../../foundation/types'
 import { addSeconds, differenceInMilliseconds } from 'date-fns'
 import { authenticateWithCredentials } from '../authentication/authenticateWithCredentials'
@@ -48,11 +50,11 @@ export function createGrayskullClient(
 		if (result.access_token) {
 			const decoded = (await decodeToken(result.access_token, clientSecret)) as IAccessToken
 			if (decoded) {
-				await tokenStorage!.setToken('access', result.access_token, new Date(decoded.exp))
+				await tokenStorage!.setToken('access', result.access_token, new Date(decoded.exp * 1000))
 
 				// Refresh the access token 2 minutes before it expires
 				if (result.refresh_token) {
-					const dateToRefresh = addSeconds(new Date(decoded.exp), -120)
+					const dateToRefresh = addSeconds(new Date(decoded.exp * 1000), -120)
 					minimumRefreshTime = differenceInMilliseconds(dateToRefresh, new Date())
 				}
 			}
@@ -60,10 +62,10 @@ export function createGrayskullClient(
 		if (result.id_token) {
 			const decoded = (await decodeToken(result.id_token, clientSecret)) as IIDToken
 			if (decoded) {
-				await tokenStorage!.setToken('id', result.id_token, new Date(decoded.exp))
+				await tokenStorage!.setToken('id', result.id_token, new Date(decoded.exp * 1000))
 				// Refresh the access token 2 minutes before it expires
 				if (result.refresh_token) {
-					const dateToRefresh = addSeconds(new Date(decoded.exp), -120)
+					const dateToRefresh = addSeconds(new Date(decoded.exp * 1000), -120)
 					const refreshInMilliseconds = differenceInMilliseconds(dateToRefresh, new Date())
 					if (refreshInMilliseconds < minimumRefreshTime) {
 						minimumRefreshTime = refreshInMilliseconds
@@ -77,6 +79,9 @@ export function createGrayskullClient(
 			if (refreshTimer) {
 				clearTimeout(refreshTimer)
 			}
+
+			console.log('Setting timeout for ms: ', minimumRefreshTime)
+
 			refreshTimer = setTimeout(async () => {
 				const refreshResult = await refreshTokens(result.refresh_token!, makeRequest)
 				handleTokenResponse(refreshResult)
@@ -144,7 +149,37 @@ export function createGrayskullClient(
 			}
 		},
 		getCurrentUser: async () => {
-			return getCurrentUser(clientSecret, tokenStorage!, makeRequest, handleTokenResponse)
+			const tryReturnUser = async () => {
+				try {
+					const idToken = await tokenStorage?.getToken('id')
+					if (idToken) {
+						if (clientSecret) {
+							return verify(idToken, clientSecret) as IAuthorizedUser & IIDToken
+						} else {
+							const result = decode(idToken, { complete: true }) as IAuthorizedUser & IIDToken
+							if (result.exp > new Date().getTime() / 1000) {
+							} else {
+								return result
+							}
+						}
+					}
+				} catch {}
+				return null
+			}
+
+			const currentUser = await tryReturnUser()
+			if (currentUser) {
+				return currentUser
+			}
+
+			const refreshToken = await tokenStorage?.getToken('refresh')
+			if (refreshToken) {
+				const result = await refreshTokens(refreshToken, makeRequest)
+				await handleTokenResponse(result)
+				return tryReturnUser()
+			} else {
+				return null
+			}
 		},
 		updateUserProfile: async (sub: string, userData: Partial<IAuthorizedUserFields>) => {
 			const accessToken = await tokenStorage?.getToken('access')

@@ -21,6 +21,15 @@ export async function getCurrentUser(
 					return result
 				}
 			}
+		} else {
+			const refreshToken = await tokenStorage?.getToken('refresh')
+			if (!refreshToken) {
+				return null
+			}
+
+			const result = await refreshTokens(refreshToken, makeRequest)
+			await handleTokenResponse(result)
+			return getCurrentUser(clientSecret, tokenStorage, makeRequest, handleTokenResponse)
 		}
 	} catch (err) {
 		console.error(err)
