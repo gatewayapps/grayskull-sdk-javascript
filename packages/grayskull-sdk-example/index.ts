@@ -1,5 +1,4 @@
 /* eslint-disable no-console */
-import jwt from 'jsonwebtoken'
 import readLine from 'readline'
 import { createGrayskullClient, ITokenStorage } from 'grayskull-sdk'
 

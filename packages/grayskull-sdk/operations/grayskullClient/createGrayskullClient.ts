@@ -35,6 +35,7 @@ export function createGrayskullClient(
 	}
 
 	const makeRequest = createRequestFunction(clientId, clientSecret, serverUrl)
+	let refreshTimer: NodeJS.Timeout | undefined = undefined
 
 	const handleTokenResponse = async (result: IAccessTokenResponse) => {
 		let minimumRefreshTime = 0
@@ -73,7 +74,10 @@ export function createGrayskullClient(
 		if (result.refresh_token && minimumRefreshTime) {
 			await tokenStorage!.setToken('refresh', result.refresh_token, undefined)
 
-			setTimeout(async () => {
+			if (refreshTimer) {
+				clearTimeout(refreshTimer)
+			}
+			refreshTimer = setTimeout(async () => {
 				const refreshResult = await refreshTokens(result.refresh_token!, makeRequest)
 				handleTokenResponse(refreshResult)
 			}, minimumRefreshTime)
@@ -142,12 +146,12 @@ export function createGrayskullClient(
 		getCurrentUser: async () => {
 			return getCurrentUser(clientSecret, tokenStorage!, makeRequest, handleTokenResponse)
 		},
-		updateUserProfile: async (userId: string, userData: Partial<IAuthorizedUserFields>) => {
+		updateUserProfile: async (sub: string, userData: Partial<IAuthorizedUserFields>) => {
 			const accessToken = await tokenStorage?.getToken('access')
 			if (!accessToken) {
 				throw new Error('You must have an access token to do that')
 			}
-			return await updateUserProfile(userId, userData, accessToken, makeRequest)
+			return await updateUserProfile(sub, userData, accessToken, makeRequest)
 		},
 		getTokenStorage: () => tokenStorage!
 	}
