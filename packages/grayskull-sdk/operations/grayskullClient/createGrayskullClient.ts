@@ -21,6 +21,9 @@ import { updateUserProfile } from '../user/updateUserProfile'
 import { resetPassword } from '../authentication/resetPassword'
 import { changePasswordWithToken } from '../authentication/changePasswordWithToken'
 
+import { getCurrentUser } from '../authentication/getCurrentUser'
+import { changePasswordWithOldPassword } from '../user/changePasswordWithOldPassword'
+
 export function createGrayskullClient(
 	clientId: string,
 	clientSecret: string | undefined,
@@ -38,13 +41,13 @@ export function createGrayskullClient(
 
 		if (result.challenge) {
 			if (result.challenge.challenge_token) {
-				tokenStorage!.setToken('challenge', result.challenge.challenge_token, undefined)
+				await tokenStorage!.setToken('challenge', result.challenge.challenge_token, undefined)
 			}
 		}
 		if (result.access_token) {
 			const decoded = (await decodeToken(result.access_token, clientSecret)) as IAccessToken
 			if (decoded) {
-				tokenStorage!.setToken('access', result.access_token, new Date(decoded.exp))
+				await tokenStorage!.setToken('access', result.access_token, new Date(decoded.exp))
 
 				// Refresh the access token 2 minutes before it expires
 				if (result.refresh_token) {
@@ -56,7 +59,7 @@ export function createGrayskullClient(
 		if (result.id_token) {
 			const decoded = (await decodeToken(result.id_token, clientSecret)) as IIDToken
 			if (decoded) {
-				tokenStorage!.setToken('id', result.id_token, new Date(decoded.exp))
+				await tokenStorage!.setToken('id', result.id_token, new Date(decoded.exp))
 				// Refresh the access token 2 minutes before it expires
 				if (result.refresh_token) {
 					const dateToRefresh = addSeconds(new Date(decoded.exp), -120)
@@ -68,7 +71,7 @@ export function createGrayskullClient(
 			}
 		}
 		if (result.refresh_token && minimumRefreshTime) {
-			tokenStorage!.setToken('refresh', result.refresh_token, undefined)
+			await tokenStorage!.setToken('refresh', result.refresh_token, undefined)
 
 			setTimeout(async () => {
 				const refreshResult = await refreshTokens(result.refresh_token!, makeRequest)
@@ -92,7 +95,7 @@ export function createGrayskullClient(
 			return result
 		},
 		authenticateWithMultifactorToken: async (multifactorToken: string) => {
-			const challengeToken = tokenStorage!.getToken('challenge')
+			const challengeToken = await tokenStorage!.getToken('challenge')
 			if (!challengeToken) {
 				throw new Error('Attempted to authenticate with multifactor token with no challenge token')
 			}
@@ -102,14 +105,14 @@ export function createGrayskullClient(
 			return result
 		},
 		createUserAccount: async (userData: IAuthorizedUserFields, password: string) => {
-			const accessToken = tokenStorage?.getToken('access')
+			const accessToken = await tokenStorage?.getToken('access')
 			if (!accessToken) {
 				throw new Error('You must have an access token to do that')
 			}
 			return await createUserAccount(userData, password, clientId, accessToken, makeRequest)
 		},
 		listAuthorizedUsers: async (limit = 100, offset = 0) => {
-			const accessToken = tokenStorage?.getToken('access')
+			const accessToken = await tokenStorage?.getToken('access')
 			if (!accessToken) {
 				throw new Error('You must have an access token to do that')
 			}
@@ -123,12 +126,28 @@ export function createGrayskullClient(
 		changePasswordWithToken: async (emailAddress: string, token: string, newPassword: string) => {
 			return await changePasswordWithToken(emailAddress, token, newPassword, makeRequest)
 		},
-		updateUserProfile: async (userData: Partial<IAuthorizedUserFields>) => {
-			const accessToken = tokenStorage?.getToken('access')
+		changePasswordWithOldPassword: async (oldPassword: string, newPassword: string) => {
+			const currentUser = await getCurrentUser(clientSecret, tokenStorage!, makeRequest, handleTokenResponse)
+			if (currentUser === null) {
+				return { success: false, message: 'You must be signed in to do that' }
+			} else {
+				const accessToken = await tokenStorage?.getToken('access')
+				if (!accessToken) {
+					return { success: false, message: 'You must have an access token to do that' }
+				}
+
+				return await changePasswordWithOldPassword(currentUser.sub, oldPassword, newPassword, accessToken, makeRequest)
+			}
+		},
+		getCurrentUser: async () => {
+			return getCurrentUser(clientSecret, tokenStorage!, makeRequest, handleTokenResponse)
+		},
+		updateUserProfile: async (userId: string, userData: Partial<IAuthorizedUserFields>) => {
+			const accessToken = await tokenStorage?.getToken('access')
 			if (!accessToken) {
 				throw new Error('You must have an access token to do that')
 			}
-			return await updateUserProfile(userData, accessToken, makeRequest)
+			return await updateUserProfile(userId, userData, accessToken, makeRequest)
 		},
 		getTokenStorage: () => tokenStorage!
 	}

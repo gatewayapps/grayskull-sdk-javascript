@@ -71,17 +71,19 @@ export interface IGrayskullClient {
 	authenticateWithClientCredentials: () => Promise<IAccessTokenResponse>
 	listAuthorizedUsers: (limit?: number, offset?: number) => Promise<any[]>
 	createUserAccount: (userData: IAuthorizedUserFields, password: string) => Promise<IAuthorizedUser>
-	updateUserProfile: (userData: Partial<IAuthorizedUserFields>) => Promise<IAuthorizedUser>
+	updateUserProfile: (userId: string, userData: Partial<IAuthorizedUserFields>) => Promise<IAuthorizedUser>
+	changePasswordWithOldPassword: (oldPassword: string, newPassword: string) => Promise<IOperationResponse>
 	resetPassword: (emailAddress: string, redirectUri: string) => Promise<IOperationResponse>
 	changePasswordWithToken: (emailAddress: string, token: string, newPassword: string) => Promise<IOperationResponse>
+	getCurrentUser: () => Promise<IAuthorizedUser | null>
 	getTokenStorage: () => ITokenStorage
 }
 
 export type TokenTypes = 'refresh' | 'access' | 'id' | 'challenge'
 
 export interface ITokenStorage {
-	setToken: (tokenType: TokenTypes, value: string, expires: Date | undefined) => void
-	getToken: (tokenType: TokenTypes) => string | null
+	setToken: (tokenType: TokenTypes, value: string, expires: Date | undefined) => Promise<void>
+	getToken: (tokenType: TokenTypes) => Promise<string | null>
 }
 
 export type RequestFunction = <T>(
