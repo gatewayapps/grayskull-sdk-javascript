@@ -13,6 +13,9 @@ const tokenStorage: ITokenStorage = {
 	getToken: async (tokenType) => tokens[tokenType],
 	setToken: async (tokenType, value) => {
 		tokens[tokenType] = value
+	},
+	deleteToken: async (tokenType) => {
+		delete tokens[tokenType]
 	}
 }
 const client = createGrayskullClient(TEST_CLIENT_ID, TEST_CLIENT_SECRET, GRAYSKULL_SERVER_URL, tokenStorage)

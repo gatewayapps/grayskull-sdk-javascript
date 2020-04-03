@@ -69,6 +69,7 @@ export interface IGrayskullClient {
 	) => Promise<IAccessTokenResponse>
 	authenticateWithMultifactorToken: (multifactorToken: string) => Promise<IAccessTokenResponse>
 	authenticateWithClientCredentials: () => Promise<IAccessTokenResponse>
+	logout: () => Promise<IOperationResponse>
 	listAuthorizedUsers: (limit?: number, offset?: number) => Promise<any[]>
 	createUserAccount: (userData: IAuthorizedUserFields, password: string) => Promise<IAuthorizedUser>
 	updateUserProfile: (userId: string, userData: Partial<IAuthorizedUserFields>) => Promise<IAuthorizedUser>
@@ -84,6 +85,7 @@ export type TokenTypes = 'refresh' | 'access' | 'id' | 'challenge'
 export interface ITokenStorage {
 	setToken: (tokenType: TokenTypes, value: string, expires: Date | undefined) => Promise<void>
 	getToken: (tokenType: TokenTypes) => Promise<string | null>
+	deleteToken: (tokenType: TokenTypes) => Promise<void>
 }
 
 export type RequestFunction = <T>(

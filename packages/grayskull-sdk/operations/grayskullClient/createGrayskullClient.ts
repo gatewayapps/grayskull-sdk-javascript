@@ -1,4 +1,4 @@
-import { verify, decode, TokenExpiredError } from 'jsonwebtoken'
+import { verify, decode } from 'jsonwebtoken'
 import {
 	ITokenStorage,
 	IGrayskullClient,
@@ -26,20 +26,30 @@ import { changePasswordWithToken } from '../authentication/changePasswordWithTok
 import { getCurrentUser } from '../authentication/getCurrentUser'
 import { changePasswordWithOldPassword } from '../user/changePasswordWithOldPassword'
 
+import debugFunc from 'debug'
+import { createMemoryTokenStorage } from '../tokenStorage/createMemoryTokenStorage'
+const debug = debugFunc('GRAYSKULL_SDK')
+
 export function createGrayskullClient(
 	clientId: string,
 	clientSecret: string | undefined,
 	serverUrl: string,
 	tokenStorage?: ITokenStorage
 ): IGrayskullClient {
+	debug(`Creating client for ${clientId}, grayskull server at ${serverUrl}`)
 	if (!tokenStorage) {
-		tokenStorage = createCookieTokenStorage()
+		if (typeof window === 'undefined') {
+			tokenStorage = createMemoryTokenStorage()
+		} else {
+			tokenStorage = createCookieTokenStorage()
+		}
 	}
 
 	const makeRequest = createRequestFunction(clientId, clientSecret, serverUrl)
 	let refreshTimer: NodeJS.Timeout | undefined = undefined
 
 	const handleTokenResponse = async (result: IAccessTokenResponse) => {
+		debug(`Received token response: ${JSON.stringify(result, null, 2)}`)
 		let minimumRefreshTime = 0
 
 		if (result.challenge) {
@@ -80,14 +90,33 @@ export function createGrayskullClient(
 				clearTimeout(refreshTimer)
 			}
 
-			console.log('Setting timeout for ms: ', minimumRefreshTime)
+			const minutes = minimumRefreshTime / 60 / 1000
+			debug(`Refreshing tokens in ${minutes} minutes`)
 
 			refreshTimer = setTimeout(async () => {
-				const refreshResult = await refreshTokens(result.refresh_token!, makeRequest)
-				handleTokenResponse(refreshResult)
+				try {
+					debug(`Refreshing tokens now`)
+					const refreshResult = await refreshTokens(result.refresh_token!, makeRequest)
+					handleTokenResponse(refreshResult)
+				} catch (err) {
+					debug(`Failed to refresh tokens`)
+					debug(err)
+				}
 			}, minimumRefreshTime)
 		}
 	}
+
+	tokenStorage
+		.getToken('refresh')
+		.then(async (currentRefreshToken) => {
+			if (currentRefreshToken) {
+				const tokenResponse = await refreshTokens(currentRefreshToken, makeRequest)
+				handleTokenResponse(tokenResponse)
+			}
+		})
+		.catch((err) => {
+			debug(err)
+		})
 
 	return {
 		authenticateWithClientCredentials: async () => {
@@ -102,6 +131,19 @@ export function createGrayskullClient(
 			const result = await authenticateWithCredentials(emailAddress, password, scopes, makeRequest)
 			await handleTokenResponse(result)
 			return result
+		},
+		logout: async () => {
+			try {
+				debug('Logging out')
+				await tokenStorage!.deleteToken('access')
+				await tokenStorage!.deleteToken('challenge')
+				await tokenStorage!.deleteToken('refresh')
+				await tokenStorage!.deleteToken('id')
+				return { success: true }
+			} catch (err) {
+				debug(err)
+				return { success: false, message: err.message }
+			}
 		},
 		authenticateWithMultifactorToken: async (multifactorToken: string) => {
 			const challengeToken = await tokenStorage!.getToken('challenge')
@@ -152,15 +194,12 @@ export function createGrayskullClient(
 			const tryReturnUser = async () => {
 				try {
 					const idToken = await tokenStorage?.getToken('id')
+
 					if (idToken) {
 						if (clientSecret) {
 							return verify(idToken, clientSecret) as IAuthorizedUser & IIDToken
 						} else {
-							const result = decode(idToken, { complete: true }) as IAuthorizedUser & IIDToken
-							if (result.exp > new Date().getTime() / 1000) {
-							} else {
-								return result
-							}
+							return decode(idToken) as IAuthorizedUser & IIDToken
 						}
 					}
 				} catch {}
@@ -173,6 +212,7 @@ export function createGrayskullClient(
 			}
 
 			const refreshToken = await tokenStorage?.getToken('refresh')
+
 			if (refreshToken) {
 				const result = await refreshTokens(refreshToken, makeRequest)
 				await handleTokenResponse(result)

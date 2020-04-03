@@ -8,6 +8,9 @@ export const createCookieTokenStorage: () => ITokenStorage = () => {
 		},
 		setToken: async (tokenType, value, expires: Date | undefined) => {
 			cookies.set(`grayskull_${tokenType}_token`, value, { expires })
+		},
+		deleteToken: async (tokenType) => {
+			cookies.erase(tokenType)
 		}
 	}
 }

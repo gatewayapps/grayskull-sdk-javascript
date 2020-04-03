@@ -7,9 +7,10 @@ export async function decodeToken(token: string, clientSecret?: string) {
 		if (!decoded.exp) {
 			throw new JsonWebTokenError(`Invalid access token: ${decoded}`)
 		}
-		if (decoded.exp < new Date().getTime()) {
+		if (decoded.exp * 1000 < new Date().getTime()) {
 			throw new TokenExpiredError('Token is expired', new Date(decoded.exp))
 		}
+		return decoded
 	} else {
 		return jwt.verify(token, clientSecret)
 	}

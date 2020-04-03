@@ -1,3 +1,5 @@
+import debugFunc from 'debug'
+const debug = debugFunc('GRAYSKULL_SDK_REQUESTS')
 import fetch from 'isomorphic-fetch'
 import { HttpMethod } from '../../foundation/types'
 
@@ -21,11 +23,15 @@ export function createRequestFunction(clientId: string, clientSecret: string | u
 		headers['accept'] = 'application/json'
 		try {
 			const finalBody = method === 'GET' ? undefined : JSON.stringify(body)
-			const response = await fetch(finalUrl.href, { body: finalBody, method, headers })
+
+			const requestOptions = { body: finalBody, method, headers }
+			debug(`Making request to ${finalUrl.href}`, requestOptions)
+			const response = await fetch(finalUrl.href, requestOptions)
 			const result = (await response.json()) as T
+			debug(`Response is`, result)
 			return result
 		} catch (err) {
-			console.error(err)
+			debug(err)
 			throw err
 		}
 	}
