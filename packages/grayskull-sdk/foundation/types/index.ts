@@ -69,6 +69,7 @@ export interface IGrayskullClient {
 	) => Promise<IAccessTokenResponse>
 	authenticateWithMultifactorToken: (multifactorToken: string) => Promise<IAccessTokenResponse>
 	authenticateWithClientCredentials: () => Promise<IAccessTokenResponse>
+	refreshTokens: () => Promise<IAccessTokenResponse>
 	logout: () => Promise<IOperationResponse>
 	listAuthorizedUsers: (limit?: number, offset?: number) => Promise<any[]>
 	createUserAccount: (userData: IAuthorizedUserFields, password: string) => Promise<IAuthorizedUser>

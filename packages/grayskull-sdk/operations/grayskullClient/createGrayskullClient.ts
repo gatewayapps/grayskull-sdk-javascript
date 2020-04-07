@@ -155,6 +155,14 @@ export function createGrayskullClient(
 			await handleTokenResponse(result)
 			return result
 		},
+		refreshTokens: async () => {
+			const refreshToken = await tokenStorage?.getToken('refresh')
+			if (!refreshToken) {
+				throw new Error('No refresh token!')
+			}
+			const tokenResponse = await refreshTokens(refreshToken!, makeRequest)
+			return tokenResponse
+		},
 		createUserAccount: async (userData: IAuthorizedUserFields, password: string) => {
 			const accessToken = await tokenStorage?.getToken('access')
 			if (!accessToken) {
