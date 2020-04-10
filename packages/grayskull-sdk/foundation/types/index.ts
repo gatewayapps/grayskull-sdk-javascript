@@ -78,7 +78,7 @@ export interface IGrayskullClient {
 	setUserMetadata: (userId: string, key: string, value: string) => Promise<IOperationResponse>
 	getUserMetadata: (userId: string) => Promise<Array<{ key: string; value: string }>>
 	deleteUserMetadata: (userId: string, key: string) => Promise<IOperationResponse>
-	listAuthorizedUsers: (limit?: number, offset?: number) => Promise<any[]>
+	listAuthorizedUsers: (limit?: number, offset?: number) => Promise<IAuthorizedUser[]>
 	createUserAccount: (userData: IAuthorizedUserFields, password: string) => Promise<IAuthorizedUser>
 	updateUserProfile: (userId: string, userData: Partial<IAuthorizedUserFields>) => Promise<IAuthorizedUser>
 	changePasswordWithOldPassword: (oldPassword: string, newPassword: string) => Promise<IOperationResponse>
@@ -115,6 +115,7 @@ export interface IAuthorizedUser {
 	email_verified: boolean
 	nickname?: string
 	picture?: string
+	meta?: { [key: string]: string }
 }
 
 export type IAuthorizedUserFields = Pick<

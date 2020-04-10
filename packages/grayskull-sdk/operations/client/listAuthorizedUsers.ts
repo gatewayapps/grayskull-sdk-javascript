@@ -1,4 +1,4 @@
-import { RequestFunction } from '../../foundation/types'
+import { RequestFunction, IAuthorizedUser } from '../../foundation/types'
 
 export async function listAuthorizedUsers(
 	limit: number,
@@ -6,8 +6,8 @@ export async function listAuthorizedUsers(
 	clientId: string,
 	accessToken: string,
 	makeRequest: RequestFunction
-): Promise<any[]> {
-	return makeRequest<any[]>(
+): Promise<IAuthorizedUser[]> {
+	return makeRequest<IAuthorizedUser[]>(
 		`/api/client/${clientId}/listAuthorizedUsers?limit=${limit}&offset=${offset}`,
 		{},
 		'GET',
