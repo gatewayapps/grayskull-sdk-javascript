@@ -28,6 +28,9 @@ import { changePasswordWithOldPassword } from '../user/changePasswordWithOldPass
 
 import debugFunc from 'debug'
 import { createMemoryTokenStorage } from '../tokenStorage/createMemoryTokenStorage'
+import { deleteUserMetadata } from '../metadata/deleteUserMetadata'
+import { getUserMetadata } from '../metadata/getUserMetadata'
+import { setUserMetadata } from '../metadata/setUserMetadata'
 const debug = debugFunc('GRAYSKULL_SDK')
 
 export function createGrayskullClient(
@@ -162,6 +165,27 @@ export function createGrayskullClient(
 			}
 			const tokenResponse = await refreshTokens(refreshToken!, makeRequest)
 			return tokenResponse
+		},
+		deleteUserMetadata: async (userId: string, key: string) => {
+			const accessToken = await tokenStorage?.getToken('access')
+			if (!accessToken) {
+				throw new Error('You must have an access token to do that')
+			}
+			return await deleteUserMetadata(userId, key, clientId, accessToken, makeRequest)
+		},
+		getUserMetadata: async (userId: string) => {
+			const accessToken = await tokenStorage?.getToken('access')
+			if (!accessToken) {
+				throw new Error('You must have an access token to do that')
+			}
+			return await getUserMetadata(userId, clientId, accessToken, makeRequest)
+		},
+		setUserMetadata: async (userId: string, key: string, value: string) => {
+			const accessToken = await tokenStorage?.getToken('access')
+			if (!accessToken) {
+				throw new Error('You must have an access token to do that')
+			}
+			return await setUserMetadata(userId, key, value, clientId, accessToken, makeRequest)
 		},
 		createUserAccount: async (userData: IAuthorizedUserFields, password: string) => {
 			const accessToken = await tokenStorage?.getToken('access')

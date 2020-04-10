@@ -1,21 +1,13 @@
 module.exports = {
 	parser: '@typescript-eslint/parser', // Specifies the ESLint parser
 	extends: [
-		'plugin:react/recommended', // Uses the recommended rules from @eslint-plugin-react
 		'prettier/@typescript-eslint',
 		'plugin:@typescript-eslint/recommended', // Uses the recommended rules from @typescript-eslint/eslint-plugin
 		'plugin:prettier/recommended'
 	],
 
-	plugins: ['@typescript-eslint', 'react', 'react-hooks'],
+	plugins: ['@typescript-eslint'],
 	overrides: [
-		{
-			files: ['**/*.tsx', '**/*.js'],
-			rules: {
-				'react/prop-types': 'off',
-				'react/display-name': 'off'
-			}
-		},
 		{
 			files: ['**/*.js', '**/*.spec.*'],
 			rules: {
@@ -73,8 +65,6 @@ module.exports = {
 		],
 		'no-unused-vars': 'error',
 
-		'react-hooks/rules-of-hooks': 'error',
-		'react-hooks/exhaustive-deps': 'warn',
 		'sort-imports': [
 			'off',
 			{
@@ -87,9 +77,5 @@ module.exports = {
 		'sort-keys': 'off',
 		'sort-vars': 'off'
 	},
-	settings: {
-		react: {
-			version: 'detect' // Tells eslint-plugin-react to automatically detect the version of React to use
-		}
-	}
+	settings: {}
 }

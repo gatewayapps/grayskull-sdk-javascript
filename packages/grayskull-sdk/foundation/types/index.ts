@@ -33,6 +33,10 @@ export interface IEmailClaim {
 	email_verified?: boolean
 }
 
+export interface IMetaClaim {
+	meta?: { [key: string]: string }
+}
+
 export interface IChallenge {
 	challenge_type: string
 	challenge_token: string
@@ -71,6 +75,9 @@ export interface IGrayskullClient {
 	authenticateWithClientCredentials: () => Promise<IAccessTokenResponse>
 	refreshTokens: () => Promise<IAccessTokenResponse>
 	logout: () => Promise<IOperationResponse>
+	setUserMetadata: (userId: string, key: string, value: string) => Promise<IOperationResponse>
+	getUserMetadata: (userId: string) => Promise<Array<{ key: string; value: string }>>
+	deleteUserMetadata: (userId: string, key: string) => Promise<IOperationResponse>
 	listAuthorizedUsers: (limit?: number, offset?: number) => Promise<any[]>
 	createUserAccount: (userData: IAuthorizedUserFields, password: string) => Promise<IAuthorizedUser>
 	updateUserProfile: (userId: string, userData: Partial<IAuthorizedUserFields>) => Promise<IAuthorizedUser>
