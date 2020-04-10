@@ -1,6 +1,6 @@
 {
 	"name": "grayskull-sdk",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Grayskull SDK for Javascript clients",
 	"main": "./dist/index.js",
 	"repository": "https://github.com/gatewayapps/grayskull-sdk-javascript",
