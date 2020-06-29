@@ -80,6 +80,7 @@ export interface IGrayskullClient {
 	deleteUserMetadata: (userId: string, key: string) => Promise<IOperationResponse>
 	listAuthorizedUsers: (limit?: number, offset?: number) => Promise<IAuthorizedUser[]>
 	createUserAccount: (userData: IAuthorizedUserFields, password: string) => Promise<IAuthorizedUser>
+	deleteUserAccount: (userId: string) => Promise<IOperationResponse>
 	updateUserProfile: (userId: string, userData: Partial<IAuthorizedUserFields>) => Promise<IAuthorizedUser>
 	changePasswordWithOldPassword: (oldPassword: string, newPassword: string) => Promise<IOperationResponse>
 	resetPassword: (emailAddress: string, redirectUri: string) => Promise<IOperationResponse>

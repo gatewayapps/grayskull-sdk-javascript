@@ -31,6 +31,7 @@ import { createMemoryTokenStorage } from '../tokenStorage/createMemoryTokenStora
 import { deleteUserMetadata } from '../metadata/deleteUserMetadata'
 import { getUserMetadata } from '../metadata/getUserMetadata'
 import { setUserMetadata } from '../metadata/setUserMetadata'
+import { deleteUserAccount } from '../client/deleteUserAccount'
 const debug = debugFunc('GRAYSKULL_SDK')
 
 export function createGrayskullClient(
@@ -212,6 +213,13 @@ export function createGrayskullClient(
 				throw new Error('You must have an access token to do that')
 			}
 			return await createUserAccount(userData, password, clientId, accessToken, makeRequest)
+		},
+		deleteUserAccount: async (userId) => {
+			const accessToken = await tokenStorage?.getToken('access')
+			if (!accessToken) {
+				throw new Error('You must have an access token to do that')
+			}
+			return await deleteUserAccount(userId, accessToken, makeRequest)
 		},
 		listAuthorizedUsers: async (limit = 100, offset = 0) => {
 			const accessToken = await tokenStorage?.getToken('access')
