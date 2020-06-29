@@ -13,5 +13,5 @@ export async function updateUserProfile(
 	accessToken: string,
 	makeRequest: RequestFunction
 ) {
-	return await makeRequest<IAuthorizedUser>(`/api/users/${sub}/profile`, userData, 'POST', accessToken)
+	return await makeRequest<IAuthorizedUser>(`/api/user/${sub}/profile`, userData, 'POST', accessToken)
 }

@@ -1,9 +1,9 @@
 /* eslint-disable no-console */
-import readLine from 'readline'
+
 import { createGrayskullClient, ITokenStorage } from 'grayskull-sdk'
 
-const TEST_CLIENT_ID = '94623896-a8f5-4e55-b955-9f12b53d0b32'
-const TEST_CLIENT_SECRET = '0b2ced047f55fc2e080904b44b704e64114a7605cbf0423fb6ae0a73f4e528c1'
+const TEST_CLIENT_ID = '69b5d655-d6c7-4321-8e38-5e1f240c0cbb'
+const TEST_CLIENT_SECRET = 'ddeb551aef4304c8beb3843cdfc66b24941994e5fa2c9861a33d771d1b09db82'
 
 const GRAYSKULL_SERVER_URL = 'http://localhost:3000'
 
@@ -21,41 +21,12 @@ const tokenStorage: ITokenStorage = {
 const client = createGrayskullClient(TEST_CLIENT_ID, TEST_CLIENT_SECRET, GRAYSKULL_SERVER_URL, tokenStorage)
 
 async function main() {
-	await client.authenticateWithClientCredentials()
+	await client.authenticateWithCredentials('danielgary@gmail.com', 'password', ['profile'])
+
+	const tokenResponse = await client.authenticateWithClientCredentials()
+	console.log(tokenResponse)
 	//await client.setUserMetadata('205cae88-a7bb-4af9-8a0e-32cd5552ad3c', 'role', 'admin')
-	const response = await client.setUserMetadata(
-		'205cae88-a7bb-4af9-8a0e-32cd5552ad3c',
-		'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz',
-		'SHOULD ERROR!'
-	)
-
-	console.log(response)
-
-	const rl = readLine.createInterface({ input: process.stdin, output: process.stdout })
-	rl.question('email? ', async (emailAddress) => {
-		rl.question('password? ', async (password) => {
-			await client.authenticateWithCredentials(emailAddress, password, [
-				'profile', // Gives you access to a users profile information
-				'email', // Gives you access to a user's email address
-				'profile:write', // Required for updating profile and changing password
-				'profile:meta', // Required for reading a users metadata
-				'offline_access', // Required for refresh token
-				'openid' // Gives you a client specific user identifier
-			])
-			const userDetails = await client.getCurrentUser()
-			console.log('USER DETAILS', userDetails)
-
-			console.log(`Hello ${userDetails?.given_name} ${userDetails?.family_name}`)
-			rl.question('Metadata key? ', async (key) => {
-				rl.question(`${key} value? `, async (value) => {
-					const result = await client.setUserMetadata(userDetails?.sub!, key, value)
-					console.log(result)
-					rl.close()
-					process.exit(0)
-				})
-			})
-		})
-	})
+	await client.updateUserProfile('e6dd4a9a-0e30-4e64-981c-4281a403e672', { given_name: 'Test Daniel' })
 }
 
 main()

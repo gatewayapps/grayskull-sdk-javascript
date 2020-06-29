@@ -135,6 +135,24 @@ export function createGrayskullClient(
 			await handleTokenResponse(result)
 			return result
 		},
+		getIDToken: async () => {
+			const token = await tokenStorage!.getToken('id')
+			let idToken: string | null = token
+			if (token) {
+				const decoded = decode(token) as IIDToken
+				const now = new Date().getTime() / 1000
+				if (decoded.exp < now) {
+					const refreshToken = await tokenStorage!.getToken('refresh')
+					if (refreshToken) {
+						const result = await refreshTokens(refreshToken, makeRequest)
+						handleTokenResponse(result)
+						idToken = result.id_token || null
+					}
+				}
+			}
+
+			return idToken
+		},
 		logout: async () => {
 			try {
 				debug('Logging out')
@@ -159,6 +177,7 @@ export function createGrayskullClient(
 			return result
 		},
 		refreshTokens: async () => {
+			debug('Refreshing tokens')
 			const refreshToken = await tokenStorage?.getToken('refresh')
 			if (!refreshToken) {
 				throw new Error('No refresh token!')

@@ -86,6 +86,7 @@ export interface IGrayskullClient {
 	changePasswordWithToken: (emailAddress: string, token: string, newPassword: string) => Promise<IOperationResponse>
 	getCurrentUser: () => Promise<IAuthorizedUser | null>
 	getTokenStorage: () => ITokenStorage
+	getIDToken: () => Promise<string | null>
 }
 
 export type TokenTypes = 'refresh' | 'access' | 'id' | 'challenge'
