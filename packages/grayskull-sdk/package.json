@@ -1,9 +1,9 @@
 {
 	"name": "grayskull-sdk",
-	"version": "0.4.0",
+	"version": "0.4.1",
 	"description": "Grayskull SDK for Javascript clients",
 	"main": "./dist/index.js",
-	"types": "./index.ts",
+	"types": "./dist/index.d.ts",
 	"repository": "https://github.com/gatewayapps/grayskull-sdk-javascript",
 	"author": "Daniel Gary",
 	"license": "MIT",

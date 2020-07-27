@@ -1,12 +1,12 @@
 {
-  "name": "grayskull-sdk-example",
-  "version": "1.0.0",
-  "main": "./dist/index.js",
-  "license": "MIT",
-  "private": true,
-  "dependencies": {
-    "@types/jsonwebtoken": "^8.3.8",
-    "grayskull-sdk": "0.1.0",
-    "jsonwebtoken": "^8.5.1"
-  }
+	"name": "grayskull-sdk-example",
+	"version": "1.0.0",
+	"main": "./dist/index.js",
+	"license": "MIT",
+	"private": true,
+	"dependencies": {
+		"@types/jsonwebtoken": "^8.3.8",
+		"grayskull-sdk": "0.3.1",
+		"jsonwebtoken": "^8.5.1"
+	}
 }
