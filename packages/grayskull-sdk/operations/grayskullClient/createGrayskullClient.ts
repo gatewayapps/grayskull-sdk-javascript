@@ -62,7 +62,7 @@ export function createGrayskullClient(
 			}
 		}
 		if (result.access_token) {
-			const decoded = (await decodeToken(result.access_token, clientSecret)) as IAccessToken
+			const decoded = (await decodeToken(result.access_token)) as IAccessToken
 			if (decoded) {
 				await tokenStorage!.setToken('access', result.access_token, new Date(decoded.exp * 1000))
 
@@ -74,7 +74,7 @@ export function createGrayskullClient(
 			}
 		}
 		if (result.id_token) {
-			const decoded = (await decodeToken(result.id_token, clientSecret)) as IIDToken
+			const decoded = (await decodeToken(result.id_token)) as IIDToken
 			if (decoded) {
 				await tokenStorage!.setToken('id', result.id_token, new Date(decoded.exp * 1000))
 				// Refresh the access token 2 minutes before it expires
