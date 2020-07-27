@@ -32,13 +32,20 @@ import { deleteUserMetadata } from '../metadata/deleteUserMetadata'
 import { getUserMetadata } from '../metadata/getUserMetadata'
 import { setUserMetadata } from '../metadata/setUserMetadata'
 import { deleteUserAccount } from '../client/deleteUserAccount'
+
+import { getSigningKeyForToken } from '../tokens/getSigningKeyForToken'
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const JwksClient = require('jwks-rsa')
+
 const debug = debugFunc('GRAYSKULL_SDK')
 
 export function createGrayskullClient(
 	clientId: string,
 	clientSecret: string | undefined,
 	serverUrl: string,
-	tokenStorage?: ITokenStorage
+	tokenStorage?: ITokenStorage,
+	tokenSignatureType?: 'HMAC256' | 'RSA256'
 ): IGrayskullClient {
 	debug(`Creating client for ${clientId}, grayskull server at ${serverUrl}`)
 	if (!tokenStorage) {
@@ -47,6 +54,13 @@ export function createGrayskullClient(
 		} else {
 			tokenStorage = createCookieTokenStorage()
 		}
+	}
+
+	let jwksClient: any
+	if (tokenSignatureType === 'RSA256') {
+		jwksClient = JwksClient({
+			jwksUri: new URL(`/.well-known/jwks.json`, serverUrl).toString()
+		})
 	}
 
 	const makeRequest = createRequestFunction(clientId, clientSecret, serverUrl)
@@ -61,8 +75,14 @@ export function createGrayskullClient(
 				await tokenStorage!.setToken('challenge', result.challenge.challenge_token, undefined)
 			}
 		}
+
 		if (result.access_token) {
-			const decoded = (await decodeToken(result.access_token)) as IAccessToken
+			let secret = clientSecret
+			if (jwksClient) {
+				secret = await getSigningKeyForToken(result.access_token, jwksClient)
+			}
+
+			const decoded = (await decodeToken(result.access_token, secret)) as IAccessToken
 			if (decoded) {
 				await tokenStorage!.setToken('access', result.access_token, new Date(decoded.exp * 1000))
 
@@ -74,7 +94,12 @@ export function createGrayskullClient(
 			}
 		}
 		if (result.id_token) {
-			const decoded = (await decodeToken(result.id_token)) as IIDToken
+			let secret = clientSecret
+			if (jwksClient) {
+				secret = await getSigningKeyForToken(result.id_token, jwksClient)
+			}
+
+			const decoded = (await decodeToken(result.id_token, secret)) as IIDToken
 			if (decoded) {
 				await tokenStorage!.setToken('id', result.id_token, new Date(decoded.exp * 1000))
 				// Refresh the access token 2 minutes before it expires

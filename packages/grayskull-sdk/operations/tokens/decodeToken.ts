@@ -12,6 +12,6 @@ export async function decodeToken(token: string, clientSecret?: string) {
 		}
 		return decoded
 	} else {
-		return jwt.verify(token, clientSecret)
+		return jwt.verify(token, clientSecret, { algorithms: ['RS256', 'HS256'] })
 	}
 }
