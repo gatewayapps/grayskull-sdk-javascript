@@ -7,7 +7,7 @@ export async function changePasswordWithToken(
 	makeRequest: RequestFunction
 ) {
 	return await makeRequest<IOperationResponse>(
-		`/api/users/changePasswordWithToken?emailAddress=${emailAddress}&token=${token}&newPassword=${newPassword}`,
+		`/api/user/changePasswordWithToken?emailAddress=${emailAddress}&token=${token}&newPassword=${newPassword}`,
 		undefined,
 		'POST'
 	)
