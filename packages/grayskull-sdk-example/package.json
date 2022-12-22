@@ -7,6 +7,6 @@
 	"dependencies": {
 		"@types/jsonwebtoken": "^8.5.1",
 		"grayskull-sdk": "0.4.2",
-		"jsonwebtoken": "^8.5.1"
+		"jsonwebtoken": "^9.0.0"
 	}
 }
